@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <!-- モバイル対応のビューポート設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>格闘キャラ 対戦テスト（表示位置調整）</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      background: #222;
+      overflow: hidden;
+    }
+    /* キャンバス：上下に余白を作って画面いっぱいに */
+    #gameCanvas {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      bottom: 80px; /* 下部操作ボタン分 */
+      background: #555;
+      width: 100%;
+      height: 100%;
+    }
+    /* 下部ボタン固定 */
+    #controls {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      text-align: center;
+      background: rgba(0,0,0,0.2);
+    }
+    .btn {
+      background: #888; border: none; color: white;
+      font-size: 24px; margin: 10px; padding: 15px 25px;
+      border-radius: 10px; touch-action: manipulation;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="320" height="260"></canvas>
+  <div id="controls">
+    <button class="btn" id="leftBtn">←</button>
+    <button class="btn" id="punchBtn">パンチ</button>
+    <button class="btn" id="rightBtn">→</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx    = canvas.getContext('2d');
+
+    // Base64ドット絵
+    const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABHklEQVRYhe3V0Q2DMBBG4QsIgiIIhCgIhChCkRACI4ggMhChCIYi+MbyZTKzZ9T0S2zM7sz+Hc/FjlNGq1Wq9WCk6jPMAgAAAAAAAAAAAICrS/h1Wi9bDaEkAsgMcX3R38S+nNMI7iMYWZfXZbRuCBejqN40AOkcArh+OpkCMBdAx+5MBqAKwLIF1u0c4Tns0gImUw2PaY19Mmr7xTzshUjH9mplyYOuZMePC8Kk4bpD+ICvNPDzBzDHzWlNUpNu39RGX1/4BgABAPdOpW8DaP47/Q/vvHEAAAAASUVORK5CYII=';
+
+    // 画像読み込み
+    const playerIdle  = new Image(), playerPunch  = new Image();
+    const enemyIdle   = new Image(), enemyPunch   = new Image();
+    playerIdle.src = playerPunch.src = enemyIdle.src = enemyPunch.src = base64Image;
+
+    // 初期座標（Yを中央付近に調整）
+    let playerX = 50,   
+        playerY = canvas.height / 2 - 16; // ≒114
+    let enemyX  = canvas.width - 50 - 32, 
+        enemyY  = canvas.height / 2 - 16;
+    const speed = 2;
+    let isPunching = false, enemyPunching = false;
+    let playerFlash = false, enemyFlash = false;
+    let gameOver = false;
+
+    // ライフ
+    const maxLife = 100;
+    let playerLife = maxLife, enemyLife = maxLife;
+
+    // 敵AIパンチ（1秒ごと50%）
+    setInterval(() => {
+      if (!enemyPunching && !gameOver && Math.random() < 0.5) {
+        enemyPunching = true;
+        setTimeout(() => { enemyPunching = false; }, 300);
+      }
+    }, 1000);
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // ライフゲージ
+      const barW = 100, barH = 10;
+      // プレイヤー
+      ctx.fillStyle = '#444';
+      ctx.fillRect(10, 10, barW, barH);
+      ctx.fillStyle = 'lime';
+      ctx.fillRect(10, 10, barW * (playerLife / maxLife), barH);
+      // 敵
+      ctx.fillStyle = '#444';
+      ctx.fillRect(canvas.width - 10 - barW, 10, barW, barH);
+      ctx.fillStyle = 'lime';
+      ctx.fillRect(
+        canvas.width - 10 - barW + (barW * (1 - enemyLife / maxLife)),
+        10,
+        barW * (enemyLife / maxLife),
+        barH
+      );
+
+      // 勝敗判定
+      if (playerLife <= 0 || enemyLife <= 0) {
+        gameOver = true;
+        ctx.fillStyle = 'white';
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+          enemyLife <= 0 ? '勝利！' : '敗北…',
+          canvas.width / 2,
+          canvas.height / 2
+        );
+        return;
+      }
+
+      // プレイヤー描画
+      if (playerFlash) {
+        ctx.fillStyle = 'rgba(255,0,0,0.5)';
+        ctx.fillRect(playerX, playerY, 32, 32);
+      }
+      const pImg = isPunching ? playerPunch : playerIdle;
+      ctx.drawImage(pImg, playerX, playerY, 32, 32);
+
+      // 敵描画（反転）
+      if (enemyFlash) {
+        ctx.fillStyle = 'rgba(255,0,0,0.5)';
+        ctx.fillRect(enemyX, enemyY, 32, 32);
+      }
+      const eImg = enemyPunching ? enemyPunch : enemyIdle;
+      ctx.save();
+      ctx.translate(enemyX + 32, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(eImg, 0, enemyY, 32, 32);
+      ctx.restore();
+
+      // 当たり判定＆ダメージ
+      if (
+        isPunching && !enemyFlash &&
+        playerX + 32 > enemyX + 8 &&
+        playerX < enemyX + 32
+      ) {
+        enemyFlash = true;
+        enemyLife = Math.max(0, enemyLife - 10);
+        setTimeout(() => { enemyFlash = false; }, 200);
+      }
+      if (
+        enemyPunching && !playerFlash &&
+        enemyX < playerX + 24 &&
+        enemyX + 32 > playerX
+      ) {
+        playerFlash = true;
+        playerLife = Math.max(0, playerLife - 10);
+        setTimeout(() => { playerFlash = false; }, 200);
+      }
+
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    // パンチ処理
+    function punch() {
+      if (isPunching || gameOver) return;
+      isPunching = true;
+      setTimeout(() => { isPunching = false; }, 300);
+    }
+
+    // キーボード操作
+    document.addEventListener('keydown', e => {
+      if (gameOver) return;
+      if (e.key === 'ArrowLeft')  playerX = Math.max(0, playerX - speed);
+      if (e.key === 'ArrowRight') playerX = Math.min(canvas.width - 32, playerX + speed);
+      if (e.key === ' ')           punch();
+    });
+
+    // タッチ操作
+    document.getElementById('leftBtn').addEventListener('touchstart', () => {
+      if (!gameOver) playerX = Math.max(0, playerX - speed * 5);
+    });
+    document.getElementById('rightBtn').addEventListener('touchstart', () => {
+      if (!gameOver) playerX = Math.min(canvas.width - 32, playerX + speed * 5);
+    });
+    document.getElementById('punchBtn').addEventListener('touchstart', punch);
+  </script>
+</body>
+</html>
