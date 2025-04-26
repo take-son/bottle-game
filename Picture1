@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ドット絵キャラテスト</title>
+  <style>
+    body {
+      margin: 0;
+      background: #222;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="320" height="240"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const player = new Image();
+player.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABHklEQVRYhe3V0Q2DMBBG4QsIgiIIhCgIhChCkRACI4ggMhChCIYi+MbyZTKzZ9T0S2zM7sz+Hc/FjlNGq1Wq9WCk6jPMAgAAAAAAAAAAAICrS/h1Wi9bDaEkAsgMcX3R38S+nNMI7iMYWZfXZbRuCBejqN40AOkcArh+OpkCMBdAx+5MBqAKwLIF1u0c4Tns0gImUw2PaY19Mmr7xTzshUjH9mplyYOuZMePC8Kk4bpD+ICvNPDzBzDHzWlNUpNu39RGX1/4BgABAPdOpW8DaP47/Q/vvHEAAAAASUVORK5CYII=';
+
+player.onload = () => {
+  ctx.drawImage(player, 144, 104, 32, 32);
+};
+</script>
+</body>
+</html>
